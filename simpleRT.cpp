@@ -8,7 +8,7 @@
 #include <time.h>
 #include <stdexcept>
 #include <sstream>
-#include <Eigen/Dense>
+// #include <Eigen/Dense>
 #include <iomanip>
 
 class coordinate
@@ -312,37 +312,68 @@ void CalcPlane (std::vector <element> &ele_vec)
     }    
 }
 
-coordinate CalcInterPoint(element &ele, ray &r)
+void CalcInterPoint(element &ele, ray &r, coordinate &res)
 {
     double t = (ele.plane[0]*r.coeff_x[0] + ele.plane[1]*r.coeff_y[0] + ele.plane[2]*r.coeff_z[0] + ele.plane[3])/
                 (ele.plane[0]*r.coeff_x[1] + ele.plane[1]*r.coeff_y[1] + ele.plane[2]*r.coeff_z[1]);
     //std::cout << "t = " << t << std::endl;
-    coordinate res;
+    // coordinate res;
     res.x = r.coeff_x[0] - t*r.coeff_x[1];
     res.y = r.coeff_y[0] - t*r.coeff_y[1];
     res.z = r.coeff_z[0] - t*r.coeff_z[1];
-    return res;
+    // return res;
 }
 
 bool WithinElement(element &ele, coordinate &p)
 {
-    using namespace std;
-    using namespace Eigen;
-    Matrix3f A;
-    Vector3f b;
-    A << ele.nodes[0].x,ele.nodes[1].x,ele.nodes[2].x,
-         ele.nodes[0].y,ele.nodes[1].y,ele.nodes[2].y,
-         ele.nodes[0].z,ele.nodes[1].z,ele.nodes[2].z;
-    b << p.x,p.y,p.z;
-    //cout << "Here is the matrix A:\n" << A << endl;
-    //cout << "Here is the vector b:\n" << b << endl;
-    Vector3f x = A.colPivHouseholderQr().solve(b);
-    //Vector3f x = A.llt().solve(b);
-    //cout << "The solution is:\n" << x << endl;
-    if (x(0) > 0 && x(1) > 0 && x(2) > 0){
-        //cout << "The solution is:\n" << x << endl;
-        return true;}
-    else{return false;}    
+    // using namespace std;
+    // using namespace Eigen;
+    // Matrix3f A;
+    // Vector3f b;
+    // A << ele.nodes[0].x,ele.nodes[1].x,ele.nodes[2].x,
+    //      ele.nodes[0].y,ele.nodes[1].y,ele.nodes[2].y,
+    //      ele.nodes[0].z,ele.nodes[1].z,ele.nodes[2].z;
+    // b << p.x,p.y,p.z;
+    // //cout << "Here is the matrix A:\n" << A << endl;
+    // //cout << "Here is the vector b:\n" << b << endl;
+    // Vector3f x = A.colPivHouseholderQr().solve(b);
+    // //Vector3f x = A.llt().solve(b);
+    // //cout << "The solution is:\n" << x << endl;
+    // if (x(0) > 0 && x(1) > 0 && x(2) > 0){
+    //     //cout << "The solution is:\n" << x << endl;
+    //     return true;}
+    // else{return false;}    
+    // return true;
+
+    /* Elements of the matrix
+    | a b c |
+    | d e f |
+    | g h i |
+    */
+    float a,b,c,d,e,f,g,h,i; // elements of the matrix
+    a = ele.nodes[0].x;
+    b = ele.nodes[1].x;
+    c = ele.nodes[2].x;
+    d = ele.nodes[0].y;
+    e = ele.nodes[1].y;
+    f = ele.nodes[2].y;
+    g = ele.nodes[0].z;
+    h = ele.nodes[1].z;
+    i = ele.nodes[2].z;
+    float D = a*(e*i - f*h) + b*(f*g - d*i) + c*(d*h - e*g);
+    float Dx = p.x*(e*i - f*h) + b*(f*p.z - p.y*i) + c*(p.y*h - e*p.z);
+    float Dy = a*(p.y*i - f*p.z) + p.x*(f*g - d*i) + c*(d*p.z - p.y*g);
+    float Dz = a*(e*p.z - p.y*h) + b*(p.y*g - d*p.z) + p.x*(d*h - e*g);
+    float x = Dx / D;
+    float y = Dy / D;
+    float z = Dz / D;
+    if (x > 0 && y > 0 && z > 0){
+    //     //cout << "The solution is:\n" << x << endl;
+        return true;
+    }
+    else{
+        return false;
+    }
 }
 
 void WriteImage(std::vector<std::vector<pixel>> &ip, int k=0, int precesion = 8)
@@ -444,7 +475,7 @@ void render(std::vector <element> &ev,std::vector<std::vector<pixel>> &ip,coordi
             
             for (int k = 0; k < count3; k++)
             {
-                inter_secion = CalcInterPoint(ev[k],r);
+                CalcInterPoint(ev[k],r, inter_secion);
                 if(WithinElement(ev[k],inter_secion))
                 {
                     //ip[i][j].pixel_val += 1;
@@ -470,7 +501,7 @@ void render(std::vector <element> &ev,std::vector<std::vector<pixel>> &ip,coordi
                 {
                     if (ii != ele_num)
                     {
-                        inter_secion = CalcInterPoint(ev[ii],r1);
+                        CalcInterPoint(ev[ii],r1, inter_secion);
                         if(WithinElement(ev[ii],inter_secion))
                         {
                             if(check(light,surface_point,inter_secion))
@@ -510,8 +541,8 @@ int main()
     double dim1 = 1;
     double dim2 = 1;
     double dim3_coordinate = -5;
-    unsigned int num1 = 50;
-    unsigned int num2 = 50;
+    unsigned int num1 = 300;
+    unsigned int num2 = 300;
 
 
     DomainParser(node_vector,element_vector,num_of_nodes,num_of_elements);
